@@ -47,8 +47,22 @@ def crear_tablero():
                 createQuad(tablero,x,y,1.0)
     return numpy.array(tablero, dtype = numpy.float32)
 
+def crear_enemigo():
+    damas = []
+    for y in [0.875,0.625]:
+        for x in range(0,8):
+            damas.extend(crear_dama(-0.875+(x*0.25),y,0.0,1.0,0.0,0.1))
+        
+    return numpy.array(damas, dtype= numpy.float32)
 
 
+def crear_player():
+    damas = []
+    for y in [-0.875,-0.625]:
+        for x in range(0,8):
+            damas.extend(crear_dama(-0.875+(x*0.25),y,1.0,0.0,0.0,0.1))
+        
+    return numpy.array(damas, dtype= numpy.float32)
 
 if __name__ == "__main__":
 
@@ -67,7 +81,8 @@ if __name__ == "__main__":
 
     glfw.make_context_current(window)
 
-    dama = crear_dama(0.5,0.0, 0.0, 1.0, 0.0, 0.2)
+    dama = crear_enemigo()
+    dama = numpy.append(dama, crear_player())
     tablero = crear_tablero()
     print(tablero)
 
@@ -97,8 +112,8 @@ if __name__ == "__main__":
     """
 
     # Binding artificial vertex array object for validation
-    VAO = glGenVertexArrays(1)
-    glBindVertexArray(VAO)
+    tableroVAO = glGenVertexArrays(1)
+    glBindVertexArray(tableroVAO)
 
     # Assembling the shader program (pipeline) with both shaders
     shaderProgram = OpenGL.GL.shaders.compileProgram(
@@ -106,18 +121,40 @@ if __name__ == "__main__":
         OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER))
 
     # Each shape must be attached to a Vertex Buffer Object (VBO)
-    vboDama = glGenBuffers(1)
-    glBindBuffer(GL_ARRAY_BUFFER, vboDama)
+    vboTablero = glGenBuffers(1)
+    glBindBuffer(GL_ARRAY_BUFFER, vboTablero)
     glBufferData(GL_ARRAY_BUFFER, len(tablero) * SIZE_IN_BYTES, tablero, GL_STATIC_DRAW)
 
-    # Telling OpenGL to use our shader program
-    glUseProgram(shaderProgram)
+    
 
-    # Setting up the clear screen color
-    glClearColor(0.5,0.5, 0.5, 1.0)
+    
 
     glClear(GL_COLOR_BUFFER_BIT)
 
+    glBindBuffer(GL_ARRAY_BUFFER, vboTablero)
+    position = glGetAttribLocation(shaderProgram, "position")
+    glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(0))
+    glEnableVertexAttribArray(position)
+
+    color = glGetAttribLocation(shaderProgram, "color")
+    glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
+    glEnableVertexAttribArray(color)
+
+    glBindVertexArray(0)
+    
+    # It renders a scene using the active shader program (pipeline) and the active VAO (shapes)
+    
+
+    #--------------------------------------------------------------
+    damaVAO = glGenVertexArrays(1)
+    glBindVertexArray(damaVAO)
+    vboDama = glGenBuffers(1)
+    glBindBuffer(GL_ARRAY_BUFFER, vboDama)
+    glBufferData(GL_ARRAY_BUFFER, len(dama) * SIZE_IN_BYTES, dama, GL_STATIC_DRAW)
+
+   
+
+  
     glBindBuffer(GL_ARRAY_BUFFER, vboDama)
     position = glGetAttribLocation(shaderProgram, "position")
     glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(0))
@@ -126,9 +163,16 @@ if __name__ == "__main__":
     color = glGetAttribLocation(shaderProgram, "color")
     glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
     glEnableVertexAttribArray(color)
+    # Setting up the clear screen color
+    glClearColor(0.5,0.5, 0.5, 1.0)
+    # Telling OpenGL to use our shader program
+    glUseProgram(shaderProgram)
     
     # It renders a scene using the active shader program (pipeline) and the active VAO (shapes)
+    glBindVertexArray(tableroVAO)
     glDrawArrays(GL_TRIANGLES, 0, int(len(tablero)/6))
+    glBindVertexArray(damaVAO)
+    glDrawArrays(GL_TRIANGLES, 0, int(len(dama)/6))
 
     # Moving our draw to the active color buffer
     glfw.swap_buffers(window)
